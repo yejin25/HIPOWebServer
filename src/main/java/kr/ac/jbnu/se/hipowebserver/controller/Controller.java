@@ -163,6 +163,33 @@ public class Controller {
         return responseEntity;
     }
 
+    @RequestMapping(value = "/android/user/signin", method = RequestMethod.GET)
+    @ResponseBody
+    public ResponseEntity<?> geteUserSignInEntity(HttpServletRequest request) {
+        ResponseEntity<?> responseEntity = null;
+        ArrayList<Map<String, Object>> accountList = new ArrayList<>();
+
+        if(dataHashMap.size() != 0){
+            for(String id : dataHashMap.keySet()) {
+                ArrayList<Map<String, Object>> tmplist = dataHashMap.get(id);
+                Map<String, Object> userInfo = tmplist.get(0);
+
+                Map<String, Object> userAccount = new HashMap<>();
+                userAccount.put("id",userInfo.get("id"));
+                userAccount.put("pw",userInfo.get("pw"));
+                accountList.add(userAccount);
+        }
+            responseEntity = new ResponseEntity<>(accountList,HttpStatus.OK);
+
+        } else{
+            responseEntity = new ResponseEntity<>("NO_DATA", HttpStatus.NOT_FOUND);
+        }
+
+        makeStatusLog(request, responseEntity);
+        return responseEntity;
+    }
+
+
     /*
         Debug
     */
