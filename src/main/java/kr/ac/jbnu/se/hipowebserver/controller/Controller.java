@@ -13,7 +13,7 @@ import java.util.Map;
 @RestController
 @Slf4j
 public class Controller {
-    public static HashMap<String, ArrayList<Map<String, Object>>> dataHashMap = new HashMap<String, ArrayList<Map<String, Object>>>(); // db 대용 테스트 - device string + arrayList [ Key value ]
+    public static HashMap<String, ArrayList<Map<String, Object>>> dataHashMap = new HashMap<String, ArrayList<Map<String, Object>>>(); // db 대용
 
     @RequestMapping(value = "/", method = RequestMethod.GET) // get all data
     @ResponseBody
@@ -31,9 +31,12 @@ public class Controller {
         return responseEntity;
     }
 
-    @RequestMapping(value = "/pi/{deviceType}", method = RequestMethod.POST, produces = "application/json") // post pi data
+    /*
+        Raspberry Pi
+    */
+    @RequestMapping(value = "/pi/{deviceType}", method = RequestMethod.POST, produces = "application/json") // pi - post
     @ResponseBody
-    public ResponseEntity<?> postResponseEntity(HttpServletRequest request, @PathVariable String deviceType, @RequestBody Map<String, Object> requestMap) {
+    public ResponseEntity<?> piPostCarDataEntity(HttpServletRequest request, @PathVariable String deviceType, @RequestBody Map<String, Object> requestMap) {
         ResponseEntity<?> responseEntity = null;
 
         if (requestMap.get("time") != null && requestMap.get("plateNumber") != null) { // 시간 및 자동차 번호 확인
@@ -86,6 +89,10 @@ public class Controller {
                 }
             }
 
+            if (responseEntity == null) {
+                responseEntity = new ResponseEntity<>("NOT_FOUND", HttpStatus.NOT_FOUND);
+            }
+
         } else {
             responseEntity = new ResponseEntity<>("NOT_CONTAIN", HttpStatus.BAD_REQUEST);
         }
@@ -94,7 +101,10 @@ public class Controller {
         return responseEntity;
     }
 
-    @RequestMapping(value = "/android/user/signup", method = RequestMethod.POST, produces = "application/json")
+    /*
+        Android
+    */
+    @RequestMapping(value = "/android/user/signup", method = RequestMethod.POST, produces = "application/json") // login - sign up
     @ResponseBody
     public ResponseEntity<?> androidPostUserSignUpEntity(HttpServletRequest request, @RequestBody Map<String, Object> requestMap) {
         ResponseEntity<?> responseEntity = null;
@@ -123,6 +133,39 @@ public class Controller {
         return responseEntity;
     }
 
+    @RequestMapping(value = "/android/user/{id}/registercar", method = RequestMethod.POST, produces = "application/json") // car - register car
+    @ResponseBody
+    public ResponseEntity<?> androidPostUserCarRegisterEntity(HttpServletRequest request, @PathVariable String id, @RequestBody Map<String, Object> requestMap) {
+        ResponseEntity<?> responseEntity = null;
+
+        if (id != null && requestMap.get("carNumber") != null) {
+            if (dataHashMap.containsKey(id)) {
+                ArrayList<Map<String, Object>> receiveData = dataHashMap.get(id);
+                Map<String, Object> receiveMap = receiveData.get(0);
+
+                receiveMap.put("userCarNumber", requestMap.get("carNumber"));
+
+                receiveData.clear();
+                receiveData.add(receiveMap);
+                dataHashMap.remove(id);
+                dataHashMap.put(id, receiveData);
+
+                responseEntity = new ResponseEntity<>(receiveMap, HttpStatus.OK);
+
+            } else {
+                responseEntity = new ResponseEntity<>("IS_NOT_HAVE_KEY", HttpStatus.BAD_REQUEST);
+            }
+
+        } else {
+            responseEntity = new ResponseEntity<>("DATA_NOT_RECOGNIZE", HttpStatus.BAD_REQUEST);
+        }
+
+        return responseEntity;
+    }
+
+    /*
+        Debug
+    */
     public void makeStatusLog(HttpServletRequest req, ResponseEntity<?> resEntity) { // 디버그용
         if (resEntity.getStatusCode() == HttpStatus.OK) {
             log.info("- Request Addr : " + req.getRemoteAddr() + " Response Entity : " + resEntity.getStatusCode() + " Response Body : " + resEntity.getBody() + " -");
