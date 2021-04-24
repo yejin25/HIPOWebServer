@@ -163,26 +163,89 @@ public class Controller {
         return responseEntity;
     }
 
-    @RequestMapping(value = "/android/user/signin", method = RequestMethod.GET)
+    @RequestMapping(value = "/android/user/signin", method = RequestMethod.GET, produces = "application/json")
     @ResponseBody
-    public ResponseEntity<?> geteUserSignInEntity(HttpServletRequest request) {
+    public ResponseEntity<?> androidGetUserSignInEntity(HttpServletRequest request, @RequestBody Map<String, Object> requestMap) {
         ResponseEntity<?> responseEntity = null;
-        ArrayList<Map<String, Object>> accountList = new ArrayList<>();
 
-        if(dataHashMap.size() != 0){
-            for(String id : dataHashMap.keySet()) {
-                ArrayList<Map<String, Object>> tmplist = dataHashMap.get(id);
-                Map<String, Object> userInfo = tmplist.get(0);
+        if (requestMap.get("id") != null && requestMap.get("pw") != null) {
+            if (dataHashMap.containsKey(requestMap.get("id"))) {
+                ArrayList<Map<String, Object>> userArray = dataHashMap.get(requestMap.get("id"));
+                Map<String, Object> userMap = userArray.get(0);
 
-                Map<String, Object> userAccount = new HashMap<>();
-                userAccount.put("id",userInfo.get("id"));
-                userAccount.put("pw",userInfo.get("pw"));
-                accountList.add(userAccount);
+                if (userMap.get("pw").toString().equals(requestMap.get("pw").toString())) {
+                    responseEntity = new ResponseEntity<>("OK", HttpStatus.OK);
+
+                } else {
+                    responseEntity = new ResponseEntity<>("NO", HttpStatus.NOT_FOUND);
+                }
+
+            } else {
+                responseEntity = new ResponseEntity<>("NO", HttpStatus.NOT_FOUND);
+            }
+
+        } else {
+            responseEntity = new ResponseEntity<>("DATA_NOT_RECOGNIZE", HttpStatus.BAD_REQUEST);
         }
-            responseEntity = new ResponseEntity<>(accountList,HttpStatus.OK);
 
-        } else{
-            responseEntity = new ResponseEntity<>("NO_DATA", HttpStatus.NOT_FOUND);
+        makeStatusLog(request, responseEntity);
+        return responseEntity;
+    }
+
+    @RequestMapping(value = "/android/user/find/{typical}", method = RequestMethod.GET)
+    @ResponseBody
+    public ResponseEntity<?> getFindUserAccount(HttpServletRequest request, @PathVariable String typical, @RequestBody Map<String, Object> requestMap) {
+        ResponseEntity<?> responseEntity = null;
+        Map<String, Object> returnalMap = new HashMap<String, Object>();
+
+        if (typical != null && requestMap != null) {
+            ArrayList<Map<String, Object>> userArray = null;
+            Map<String, Object> userMap = null;
+
+            switch (typical) {
+                case "id":
+                    for (String key : dataHashMap.keySet()) {
+                        userArray = dataHashMap.get(key);
+                        userMap = userArray.get(0);
+
+                        if (userMap.get("userName").toString().equals(requestMap.get("userName").toString())
+                                && userMap.get("userPhoneNumber").toString().equals(requestMap.get("userPhoneNumber").toString())) {
+                            returnalMap.put("userId", userMap.get("id"));
+                            break;
+                        }
+
+                    }
+
+                    break;
+
+                case "pw":
+                    for (String key : dataHashMap.keySet()) {
+                        userArray = dataHashMap.get(key);
+                        userMap = userArray.get(0);
+
+                        if (userMap.get("id").toString().equals(requestMap.get("userId").toString())
+                                && userMap.get("userPhoneNumber").toString().equals(requestMap.get("userPhoneNumber").toString())) {
+                            returnalMap.put("isChecked", "OK");
+                            break;
+
+                        } else {
+                            returnalMap.put("isChecked", "NO");
+                        }
+
+                    }
+
+                    break;
+            }
+
+            if (returnalMap == null) {
+                responseEntity = new ResponseEntity<>("IS_NOT", HttpStatus.BAD_REQUEST);
+
+            } else {
+                responseEntity = new ResponseEntity<>(returnalMap, HttpStatus.OK);
+            }
+
+        } else {
+            responseEntity = new ResponseEntity<>("DATA_NOT_RECOGNIZE", HttpStatus.BAD_REQUEST);
         }
 
         makeStatusLog(request, responseEntity);
