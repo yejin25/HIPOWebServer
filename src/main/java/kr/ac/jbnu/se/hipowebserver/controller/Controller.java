@@ -163,6 +163,36 @@ public class Controller {
         return responseEntity;
     }
 
+    @RequestMapping(value = "/android/user/{id}/changepw", method = RequestMethod.POST, produces = "application/json")
+    @ResponseBody
+    public ResponseEntity<?> androidPostChangeUserPasswordEntity(HttpServletRequest request, @PathVariable String id, @RequestBody Map<String, Object> requestMap) {
+        ResponseEntity<?> responseEntity = null;
+
+        if (id != null && requestMap != null) {
+            if (dataHashMap.containsKey(id)) {
+                ArrayList<Map<String, Object>> userList = dataHashMap.get(id);
+                Map<String, Object> userMap = userList.get(0);
+
+                userMap.put("pw", requestMap.get("changedPW"));
+
+                userList.clear();
+                userList.add(userMap);
+                dataHashMap.remove(id);
+                dataHashMap.put(id, userList);
+
+                responseEntity = new ResponseEntity<>(userMap, HttpStatus.OK);
+
+            } else {
+                responseEntity = new ResponseEntity<>("IS_NOT_HAVE_KEY", HttpStatus.BAD_REQUEST);
+            }
+
+        } else {
+            responseEntity = new ResponseEntity<>("DATA_NOT_RECOGNIZE", HttpStatus.BAD_REQUEST);
+        }
+
+        return responseEntity;
+    }
+
     @RequestMapping(value = "/android/user/signin", method = RequestMethod.GET, produces = "application/json")
     @ResponseBody
     public ResponseEntity<?> androidGetUserSignInEntity(HttpServletRequest request, @RequestBody Map<String, Object> requestMap) {
