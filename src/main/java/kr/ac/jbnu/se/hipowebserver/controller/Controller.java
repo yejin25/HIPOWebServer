@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.jws.Oneway;
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,11 +44,14 @@ public class Controller {
             for (String id : dataHashMap.keySet()) {
                 ArrayList<Map<String, Object>> uArray = dataHashMap.get(id);
                 Map<String, Object> uMap = uArray.get(0);
+                boolean isStatusOK = false;
 
                 if (uMap.containsKey("userCarNumber")) {
                     if (uMap.get("userCarNumber").toString().equals(requestMap.get("plateNumber").toString())) { // 차 번호판이 겹치냐?
                         ArrayList<Map<String, Object>> presentCarList = null;
+                        ArrayList<Map<String, Object>> allCarList = null;
                         Map<String, Object> dataMap = null;
+                        Map<String, Object> allDataMap = null;
 
                         if (uMap.get("presentCarList") != null) {
                             presentCarList = (ArrayList<Map<String, Object>>) uMap.get("presentCarList");
@@ -58,30 +62,61 @@ public class Controller {
                             dataMap = new HashMap<String, Object>();
                         }
 
+                        if (uMap.get("allCarList") != null) {
+                            allCarList = (ArrayList<Map<String, Object>>) uMap.get("allCarList");
+
+                        } else {
+                            allCarList = new ArrayList<Map<String, Object>>();
+                        }
+
+                        allDataMap = new HashMap<String, Object>();
+
                         switch (deviceType) {
                             case "input":
                                 dataMap.put("time", requestMap.get("time"));
+                                dataMap.put("isBalanceCheck", "F");
+                                isStatusOK = true;
                                 break;
 
                             case "output":
-                                dataMap.put("outTime", requestMap.get("time"));
+                                if (dataMap.containsKey("time")) {
+                                    if (dataMap.get("isBalanceCheck").toString().equals("T")) {
+                                        allDataMap.put("time", dataMap.get("time"));
+                                        allDataMap.put("outTime", requestMap.get("time"));
+                                        isStatusOK = true;
+                                    }
+                                }
                                 break;
 
                             case "parking":
                                 dataMap.put("parkingTime", requestMap.get("time"));
+                                isStatusOK = true;
                                 break;
                         }
 
-                        presentCarList.clear();
-                        presentCarList.add(0, dataMap);
-                        uMap.remove("presentCarList");
-                        uMap.put("presentCarList", presentCarList);
-                        uArray.clear();
-                        uArray.add(0, uMap);
-                        dataHashMap.remove(id);
-                        dataHashMap.put(id, uArray);
+                        if (isStatusOK) {
+                            presentCarList.clear();
+                            presentCarList.add(0, dataMap);
+                            if (deviceType.equals("output")) {
+                                uMap.remove("presentCarList");
+                                allCarList.add(allDataMap);
+                                uMap.put("allCarList", allCarList);
 
-                        responseEntity = new ResponseEntity<>(dataMap, HttpStatus.OK);
+                            } else {
+                                uMap.remove("presentCarList");
+                                uMap.put("presentCarList", presentCarList);
+                            }
+                            uArray.clear();
+                            uArray.add(0, uMap);
+                            dataHashMap.remove(id);
+                            dataHashMap.put(id, uArray);
+
+                            responseEntity = new ResponseEntity<>(dataMap, HttpStatus.OK);
+
+                        } else {
+                            responseEntity = new ResponseEntity<>("NO_BALANCED", HttpStatus.NOT_FOUND);
+                        }
+
                     }
 
                 } else {
@@ -224,7 +259,7 @@ public class Controller {
 
     @RequestMapping(value = "/android/user/find/{typical}", method = RequestMethod.GET)
     @ResponseBody
-    public ResponseEntity<?> getFindUserAccount(HttpServletRequest request, @PathVariable String typical, @RequestBody Map<String, Object> requestMap) {
+    public ResponseEntity<?> AndroidGetFindUserAccount(HttpServletRequest request, @PathVariable String typical, @RequestBody Map<String, Object> requestMap) {
         ResponseEntity<?> responseEntity = null;
         Map<String, Object> returnalMap = new HashMap<String, Object>();
 
@@ -282,6 +317,91 @@ public class Controller {
         return responseEntity;
     }
 
+    @RequestMapping(value = "/android/user/myinfo/{id}", method = RequestMethod.GET)
+    @ResponseBody
+    public ResponseEntity<?> AndroidGetCarUserInfo(HttpServletRequest request, @PathVariable String id) {
+        ResponseEntity<?> responseEntity = null;
+
+        if (dataHashMap.containsKey(id)) {
+            ArrayList<Map<String, Object>> userList = dataHashMap.get(id);
+            Map<String, Object> userMap = userList.get(0);
+
+            if (userMap.containsKey("presentCarList")) {
+                responseEntity = new ResponseEntity<>(userMap.get("presentCarList"), HttpStatus.OK);
+
+            } else {
+                responseEntity = new ResponseEntity<>("IS_NOT", HttpStatus.BAD_REQUEST);
+            }
+
+        } else {
+            responseEntity = new ResponseEntity<>("IS_NOT_HAVE_KEY", HttpStatus.BAD_REQUEST);
+        }
+
+        makeStatusLog(request, responseEntity);
+        return responseEntity;
+    }
+
+    @RequestMapping(value = "/android/user/myinfo/all/{id}", method = RequestMethod.GET)
+    @ResponseBody
+    public ResponseEntity<?> AndroidGetAllCarUserInfo(HttpServletRequest request, @PathVariable String id) {
+        ResponseEntity<?> responseEntity = null;
+
+        if (dataHashMap.containsKey(id)) {
+            ArrayList<Map<String, Object>> userList = dataHashMap.get(id);
+            Map<String, Object> userMap = userList.get(0);
+
+            if (userMap.containsKey("allCarList")) {
+                responseEntity = new ResponseEntity<>(userMap.get("allCarList"), HttpStatus.OK);
+
+            } else {
+                responseEntity = new ResponseEntity<>("IS_NOT", HttpStatus.BAD_REQUEST);
+            }
+
+        } else {
+            responseEntity = new ResponseEntity<>("IS_NOT_HAVE_KEY", HttpStatus.BAD_REQUEST);
+        }
+
+        makeStatusLog(request, responseEntity);
+        return responseEntity;
+    }
+
+    @RequestMapping(value = "/android/user/myinfo/balanceup/{id}", method = RequestMethod.GET)
+    @ResponseBody
+    public ResponseEntity<?> AndroidGetBalanceUpCar(HttpServletRequest request, @PathVariable String id) {
+        ResponseEntity<?> responseEntity = null;
+
+        if (dataHashMap.containsKey(id)) {
+            ArrayList<Map<String, Object>> userList = dataHashMap.get(id);
+            Map<String, Object> userMap = userList.get(0);
+
+            if (userMap.containsKey("presentCarList")) {
+                ArrayList<Map<String, Object>> userPresentList = (ArrayList<Map<String, Object>>) userMap.get("presentCarList");
+                Map<String, Object> userPresentMap = userPresentList.get(0);
+
+                userPresentMap.put("isBalanceCheck", "T");
+
+                userPresentList.clear();
+                userPresentList.add(userPresentMap);
+                userMap.remove("presentCarList");
+                userMap.put("presentCarList", userPresentList);
+                userList.clear();
+                userList.add(userMap);
+                dataHashMap.remove(id);
+                dataHashMap.put(id, userList);
+
+                responseEntity = new ResponseEntity<>(userPresentMap, HttpStatus.OK);
+
+            } else {
+                responseEntity = new ResponseEntity<>("NOT_CONTAIN", HttpStatus.NOT_FOUND);
+            }
+
+        } else {
+            responseEntity = new ResponseEntity<>("NOT_CONTAIN", HttpStatus.NOT_FOUND);
+        }
+
+        makeStatusLog(request, responseEntity);
+        return responseEntity;
+    }
 
     /*
         Debug
