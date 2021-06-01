@@ -1,14 +1,23 @@
 package kr.ac.jbnu.se.hipowebserver.controller;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
 import javax.jws.Oneway;
 import javax.servlet.http.HttpServletRequest;
+import javax.swing.filechooser.FileSystemView;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 @RestController
@@ -79,10 +88,11 @@ public class Controller {
                                 break;
 
                             case "output":
-                                if (dataMap.containsKey("time")) {
+                                if (dataMap.containsKey("time") && dataMap.containsKey("parkingArea")) {
                                     if (dataMap.get("isBalanceCheck").toString().equals("T")) {
                                         allDataMap.put("time", dataMap.get("time"));
                                         allDataMap.put("outTime", requestMap.get("time"));
+                                        allDataMap.put("parkingArea", requestMap.get("parkingArea"));
                                         isStatusOK = true;
                                     }
                                 }
@@ -90,6 +100,7 @@ public class Controller {
 
                             case "parking":
                                 dataMap.put("parkingTime", requestMap.get("time"));
+                                dataMap.put("parkingArea",requestMap.get("parkingArea"));
                                 isStatusOK = true;
                                 break;
                         }
@@ -145,8 +156,8 @@ public class Controller {
         ResponseEntity<?> responseEntity = null;
         ArrayList<Map<String, Object>> receiveUserData;
 
-        if (requestMap.get("id") != null && requestMap.get("pw") != null && requestMap.get("userName") != null && requestMap.get("userPhoneNumber") != null) {
-            if (!dataHashMap.containsKey(requestMap.get("id"))) {
+        if (!dataHashMap.containsKey(requestMap.get("id"))) {
+            if (requestMap.get("pw") != null && requestMap.get("userName") != null && requestMap.get("userPhoneNumber") != null) {
                 receiveUserData = new ArrayList<Map<String, Object>>();
 
                 Map<String, Object> tempMap = requestMap;
@@ -156,45 +167,14 @@ public class Controller {
                 responseEntity = new ResponseEntity<>(tempMap, HttpStatus.OK);
 
             } else {
-                responseEntity = new ResponseEntity<>("IS_HAVE_KEY", HttpStatus.BAD_REQUEST);
+                responseEntity = new ResponseEntity<>("DATA_NOT_RECOGNIZE", HttpStatus.BAD_REQUEST);
             }
 
-
         } else {
-            responseEntity = new ResponseEntity<>("DATA_NOT_RECOGNIZE", HttpStatus.BAD_REQUEST);
+            responseEntity = new ResponseEntity<>("IS_HAVE_KEY", HttpStatus.BAD_REQUEST);
         }
 
         makeStatusLog(request, responseEntity);
-        return responseEntity;
-    }
-
-    @RequestMapping(value = "/android/user/{id}/registercar", method = RequestMethod.POST, produces = "application/json") // car - register car
-    @ResponseBody
-    public ResponseEntity<?> androidPostUserCarRegisterEntity(HttpServletRequest request, @PathVariable String id, @RequestBody Map<String, Object> requestMap) {
-        ResponseEntity<?> responseEntity = null;
-
-        if (id != null && requestMap.get("carNumber") != null) {
-            if (dataHashMap.containsKey(id)) {
-                ArrayList<Map<String, Object>> receiveData = dataHashMap.get(id);
-                Map<String, Object> receiveMap = receiveData.get(0);
-
-                receiveMap.put("userCarNumber", requestMap.get("carNumber"));
-
-                receiveData.clear();
-                receiveData.add(receiveMap);
-                dataHashMap.remove(id);
-                dataHashMap.put(id, receiveData);
-
-                responseEntity = new ResponseEntity<>(receiveMap, HttpStatus.OK);
-
-            } else {
-                responseEntity = new ResponseEntity<>("IS_NOT_HAVE_KEY", HttpStatus.BAD_REQUEST);
-            }
-
-        } else {
-            responseEntity = new ResponseEntity<>("DATA_NOT_RECOGNIZE", HttpStatus.BAD_REQUEST);
-        }
-
         return responseEntity;
     }
 
@@ -224,14 +204,58 @@ public class Controller {
         } else {
             responseEntity = new ResponseEntity<>("DATA_NOT_RECOGNIZE", HttpStatus.BAD_REQUEST);
         }
+        return responseEntity;
+    }
+
+    @RequestMapping(value = "/android/user/{id}/registercar", method = RequestMethod.POST, produces = "application/json", headers = ("content-type=multipart/*"), consumes = "multipart/form-data") // car - register car
+    @ResponseBody
+    public ResponseEntity<?> androidPostUserCarRegisterEntity(HttpServletRequest request, @PathVariable String id, @RequestParam("file") MultipartFile file, @RequestParam("carNumber") String carNumber) {
+        ResponseEntity<?> responseEntity = null;
+
+        if (id != null && carNumber != null) {
+            if (dataHashMap.containsKey(id)) {
+                ArrayList<Map<String, Object>> receiveData = dataHashMap.get(id);
+                Map<String, Object> receiveMap = receiveData.get(0);
+
+                receiveMap.put("unAcceptCarNumber", carNumber);
+                receiveMap.put("checkCarLicense", "F");
+
+                String reName = id;
+
+
+                String savePath = FileSystemView.getFileSystemView().getHomeDirectory().toString() + "/hipo_img/" + reName;
+
+                File saveFile = new File(savePath);
+                try {
+                    file.transferTo(saveFile);// file save
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+
+                receiveData.clear();
+                receiveData.add(receiveMap);
+                dataHashMap.remove(id);
+                dataHashMap.put(id, receiveData);
+
+                responseEntity = new ResponseEntity<>(receiveMap, HttpStatus.OK);
+
+            } else {
+                responseEntity = new ResponseEntity<>("IS_NOT_HAVE_KEY", HttpStatus.BAD_REQUEST);
+            }
+
+        } else {
+            responseEntity = new ResponseEntity<>("DATA_NOT_RECOGNIZE", HttpStatus.BAD_REQUEST);
+        }
 
         return responseEntity;
     }
 
-    @RequestMapping(value = "/android/user/signin", method = RequestMethod.GET, produces = "application/json")
+    @RequestMapping(value = "/android/user/signin", method = RequestMethod.POST, produces = "application/json")
     @ResponseBody
     public ResponseEntity<?> androidGetUserSignInEntity(HttpServletRequest request, @RequestBody Map<String, Object> requestMap) {
         ResponseEntity<?> responseEntity = null;
+        Map<String, Object> returnalMap = new HashMap<String, Object>();
 
         if (requestMap.get("id") != null && requestMap.get("pw") != null) {
             if (dataHashMap.containsKey(requestMap.get("id"))) {
@@ -239,7 +263,15 @@ public class Controller {
                 Map<String, Object> userMap = userArray.get(0);
 
                 if (userMap.get("pw").toString().equals(requestMap.get("pw").toString())) {
-                    responseEntity = new ResponseEntity<>("OK", HttpStatus.OK);
+                        returnalMap.put("userName", userMap.get("userName"));
+                    if (userMap.get("checkCarLicense") != null){
+                        Map<String, Object> checkCarLicenseMap = new HashMap<>();
+                        returnalMap.put("checkCarLicense", userMap.get("checkCarLicense"));
+                        responseEntity = new ResponseEntity<>(returnalMap, HttpStatus.OK);
+                    }
+                    else{
+                        responseEntity = new ResponseEntity<>(returnalMap, HttpStatus.OK);
+                    }
 
                 } else {
                     responseEntity = new ResponseEntity<>("NO", HttpStatus.NOT_FOUND);
@@ -257,7 +289,7 @@ public class Controller {
         return responseEntity;
     }
 
-    @RequestMapping(value = "/android/user/find/{typical}", method = RequestMethod.GET)
+    @RequestMapping(value = "/android/user/find/{typical}", method = RequestMethod.POST)
     @ResponseBody
     public ResponseEntity<?> AndroidGetFindUserAccount(HttpServletRequest request, @PathVariable String typical, @RequestBody Map<String, Object> requestMap) {
         ResponseEntity<?> responseEntity = null;
@@ -317,6 +349,135 @@ public class Controller {
         return responseEntity;
     }
 
+    @RequestMapping(value = "/android/admin/signin", method = RequestMethod.POST, produces = "application/json")
+    @ResponseBody
+    public ResponseEntity<?> androiPostAdminSignInEntity(HttpServletRequest request, @RequestBody Map<String, Object> requestMap) {
+        ResponseEntity<?> responseEntity = null;
+        String password = "qlalfqjsghqwer1234";
+
+        if (requestMap.get("pw") != null) {
+                if (password.equals(requestMap.get("pw").toString())) {
+                    responseEntity = new ResponseEntity<>("OK", HttpStatus.OK);
+
+                } else {
+                    responseEntity = new ResponseEntity<>("NO", HttpStatus.NOT_FOUND);
+                }
+        }else{
+            responseEntity = new ResponseEntity<>("NO_DATA_RECOGNIZE",HttpStatus.BAD_REQUEST);
+        }
+        makeStatusLog(request, responseEntity);
+        return responseEntity;
+    }
+
+    @RequestMapping(value = "/android/admin/accepted/{id}" , method = RequestMethod.GET)
+    @ResponseBody
+    public ResponseEntity<?> AndroidPostCheckCarLicense(HttpServletRequest request, @PathVariable String id) {
+        ResponseEntity<?> responseEntity = null;
+
+        if(dataHashMap.containsKey(id)){
+            ArrayList<Map<String, Object>> userList = dataHashMap.get(id);
+            Map<String, Object> userMap = userList.get(0);
+
+            userMap.put("userCarNumber", userMap.get("unAcceptCarNumber").toString());
+            userMap.put("checkCarLicense", "T");
+
+            userMap.remove("unAcceptCarNumber");
+
+            userList.clear();
+            userList.add(userMap);
+            dataHashMap.remove(id);
+            dataHashMap.put(id, userList);
+
+            responseEntity = new ResponseEntity<>(userMap, HttpStatus.OK);
+        }
+        else {
+            responseEntity = new ResponseEntity<>("IS_NOT_HAVE_KEY", HttpStatus.BAD_REQUEST);
+        }
+
+        makeStatusLog(request, responseEntity);
+        return responseEntity;
+    }
+
+    @RequestMapping(value = "/android/user/parkingArea/{id}", method = RequestMethod.GET)
+    @ResponseBody
+    public ResponseEntity<?> AndroidGetParkingArea(HttpServletRequest request, @PathVariable String id) {
+        ResponseEntity<?> responseEntity = null;
+
+        HashMap<String, Object> userDataHashMap = new HashMap<String, Object>();
+
+        if(dataHashMap.containsKey(id)){
+            ArrayList<Map<String, Object>> userList = dataHashMap.get(id);
+            Map<String, Object> userMap = userList.get(0);
+
+            if (userMap.containsKey("presentCarList")) {
+
+                ArrayList<Map<String, Object>> userPresentList = (ArrayList<Map<String, Object>>) userMap.get("presentCarList");
+                Map<String, Object> userPresentMap = userPresentList.get(0);
+
+                if(userPresentMap.containsKey("parkingArea")) {
+                    String filePath = FileSystemView.getFileSystemView().getHomeDirectory().toString() + "/parkinglot_img/";
+
+                    try {
+                        userDataHashMap.put(userPresentMap.get("parkingArea").toString(), Files.readAllBytes(new File(filePath + userPresentMap.get("parkingArea").toString()).toPath()));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    responseEntity = new ResponseEntity<>(userDataHashMap, HttpStatus.OK);
+                }else{
+                    responseEntity = new ResponseEntity<>("NO_DATA_ABOUT_AREA", HttpStatus.BAD_REQUEST);
+                }
+            }
+            else{
+                responseEntity = new ResponseEntity<>("NO_DATA", HttpStatus.BAD_REQUEST);
+            }
+        }else{
+            responseEntity = new ResponseEntity<>("NOT_HAVE_KEY", HttpStatus.BAD_REQUEST);
+        }
+
+        makeStatusLog(request, responseEntity);
+        return responseEntity;
+
+    }
+
+
+    @RequestMapping(value = "/android/user/myinfo/balanceup/{id}", method = RequestMethod.GET)
+    @ResponseBody
+    public ResponseEntity<?> AndroidGetBalanceUpCar(HttpServletRequest request, @PathVariable String id) {
+        ResponseEntity<?> responseEntity = null;
+
+        if (dataHashMap.containsKey(id)) {
+            ArrayList<Map<String, Object>> userList = dataHashMap.get(id);
+            Map<String, Object> userMap = userList.get(0);
+
+            if (userMap.containsKey("presentCarList")) {
+                ArrayList<Map<String, Object>> userPresentList = (ArrayList<Map<String, Object>>) userMap.get("presentCarList");
+                Map<String, Object> userPresentMap = userPresentList.get(0);
+
+                userPresentMap.put("isBalanceCheck", "T");
+
+                userPresentList.clear();
+                userPresentList.add(userPresentMap);
+                userMap.remove("presentCarList");
+                userMap.put("presentCarList", userPresentList);
+                userList.clear();
+                userList.add(userMap);
+                dataHashMap.remove(id);
+                dataHashMap.put(id, userList);
+
+                responseEntity = new ResponseEntity<>(userPresentMap, HttpStatus.OK);
+
+            } else {
+                responseEntity = new ResponseEntity<>("NOT_CONTAIN", HttpStatus.NOT_FOUND);
+            }
+
+        } else {
+            responseEntity = new ResponseEntity<>("NOT_CONTAIN", HttpStatus.NOT_FOUND);
+        }
+
+        makeStatusLog(request, responseEntity);
+        return responseEntity;
+    }
+
     @RequestMapping(value = "/android/user/myinfo/{id}", method = RequestMethod.GET)
     @ResponseBody
     public ResponseEntity<?> AndroidGetCarUserInfo(HttpServletRequest request, @PathVariable String id) {
@@ -365,38 +526,33 @@ public class Controller {
         return responseEntity;
     }
 
-    @RequestMapping(value = "/android/user/myinfo/balanceup/{id}", method = RequestMethod.GET)
+    @RequestMapping(value = "/android/admin/licenseimages", method = RequestMethod.GET, produces = "application/json")
     @ResponseBody
-    public ResponseEntity<?> AndroidGetBalanceUpCar(HttpServletRequest request, @PathVariable String id) {
+    public ResponseEntity<?> androidGetLicenseImages(HttpServletRequest request) {
         ResponseEntity<?> responseEntity = null;
+        HashMap<String, Object> userDataHashMap = new HashMap<String, Object>();
 
-        if (dataHashMap.containsKey(id)) {
-            ArrayList<Map<String, Object>> userList = dataHashMap.get(id);
-            Map<String, Object> userMap = userList.get(0);
+        String filePath = FileSystemView.getFileSystemView().getHomeDirectory().toString() + "/hipo_img/";
 
-            if (userMap.containsKey("presentCarList")) {
-                ArrayList<Map<String, Object>> userPresentList = (ArrayList<Map<String, Object>>) userMap.get("presentCarList");
-                Map<String, Object> userPresentMap = userPresentList.get(0);
+        if (!dataHashMap.isEmpty()) {
+            for (String key : dataHashMap.keySet()) {
+                if (dataHashMap.get(key).get(0).get("checkCarLicense").equals("F")) {
+                    try {
+                        userDataHashMap.put(key, Files.readAllBytes(new File(filePath + key).toPath()));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
 
-                userPresentMap.put("isBalanceCheck", "T");
-
-                userPresentList.clear();
-                userPresentList.add(userPresentMap);
-                userMap.remove("presentCarList");
-                userMap.put("presentCarList", userPresentList);
-                userList.clear();
-                userList.add(userMap);
-                dataHashMap.remove(id);
-                dataHashMap.put(id, userList);
-
-                responseEntity = new ResponseEntity<>(userPresentMap, HttpStatus.OK);
-
+                }
+            }
+            if (!userDataHashMap.isEmpty()) {
+                responseEntity = new ResponseEntity<>(userDataHashMap, HttpStatus.OK);
             } else {
-                responseEntity = new ResponseEntity<>("NOT_CONTAIN", HttpStatus.NOT_FOUND);
+                responseEntity = new ResponseEntity<>("EMPTY_CARLICENSE_IMAGE", HttpStatus.NOT_FOUND);
             }
 
         } else {
-            responseEntity = new ResponseEntity<>("NOT_CONTAIN", HttpStatus.NOT_FOUND);
+            responseEntity = new ResponseEntity<>("EMPTY_USER_DATA", HttpStatus.NOT_FOUND);
         }
 
         makeStatusLog(request, responseEntity);
