@@ -1,23 +1,18 @@
 package kr.ac.jbnu.se.hipowebserver.controller;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.imageio.ImageIO;
-import javax.jws.Oneway;
 import javax.servlet.http.HttpServletRequest;
 import javax.swing.filechooser.FileSystemView;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 @RestController
@@ -157,7 +152,8 @@ public class Controller {
         ArrayList<Map<String, Object>> receiveUserData;
 
         if (!dataHashMap.containsKey(requestMap.get("id"))) {
-            if (requestMap.get("pw") != null && requestMap.get("userName") != null && requestMap.get("userPhoneNumber") != null) {
+            if (requestMap.get("pw") != null && requestMap.get("userName") != null
+                    && requestMap.get("userPhoneNumber") != null && requestMap.get("userEmail") != null) {
                 receiveUserData = new ArrayList<Map<String, Object>>();
 
                 Map<String, Object> tempMap = requestMap;
@@ -288,10 +284,10 @@ public class Controller {
         makeStatusLog(request, responseEntity);
         return responseEntity;
     }
-
+/*
     @RequestMapping(value = "/android/user/find/{typical}", method = RequestMethod.POST)
     @ResponseBody
-    public ResponseEntity<?> AndroidGetFindUserAccount(HttpServletRequest request, @PathVariable String typical, @RequestBody Map<String, Object> requestMap) {
+    public ResponseEntity<?> AndroidPostFindUserAccount(HttpServletRequest request, @PathVariable String typical, @RequestBody Map<String, Object> requestMap) {
         ResponseEntity<?> responseEntity = null;
         Map<String, Object> returnalMap = new HashMap<String, Object>();
 
@@ -344,6 +340,77 @@ public class Controller {
         } else {
             responseEntity = new ResponseEntity<>("DATA_NOT_RECOGNIZE", HttpStatus.BAD_REQUEST);
         }
+
+        makeStatusLog(request, responseEntity);
+        return responseEntity;
+    }*/
+
+    @RequestMapping(value = "/android/user/find/id", method = RequestMethod.POST)
+    @ResponseBody
+    public ResponseEntity<?> AndroidPostFindUserID(HttpServletRequest request, @RequestBody Map<String, Object> requestMap) {
+        ResponseEntity<?> responseEntity = null;
+
+        if (requestMap.get("userName") != null && requestMap.get("userEmail") != null
+                && !requestMap.get("userName").equals("") && !requestMap.get("userEmail").equals("")) {
+
+            if (!dataHashMap.isEmpty()) {
+                for (String key : dataHashMap.keySet()) {
+                    Map<String, Object> userMap = dataHashMap.get(key).get(0);
+
+                    if (userMap.get("userName").equals(requestMap.get("userName"))
+                            && userMap.get("userEmail").equals(requestMap.get("userEmail"))) {
+
+                        MailController mailController = MailController.getInstance();
+                        mailController.sendIDMail(key, userMap.get("userEmail").toString(), userMap.get("userName").toString());
+
+                        responseEntity = new ResponseEntity<>("SEND_SUCCESS", HttpStatus.OK);
+                        break;
+
+                    } else {
+                        responseEntity = new ResponseEntity<>("DONT_HAVE", HttpStatus.NOT_FOUND);
+                    }
+                }
+            }
+        } else {
+            responseEntity = new ResponseEntity<>("DATA_IS_NULL", HttpStatus.BAD_REQUEST);
+        }
+
+
+        makeStatusLog(request, responseEntity);
+        return responseEntity;
+    }
+
+    @RequestMapping(value = "/android/user/find/pw", method = RequestMethod.POST)
+    @ResponseBody
+    public ResponseEntity<?> AndroidPostFindUserPW(HttpServletRequest request, @RequestBody Map<String, Object> requestMap) {
+        ResponseEntity<?> responseEntity = null;
+
+        if (requestMap.get("userName") != null && requestMap.get("userEmail") != null && requestMap.get("id") != null
+                && !requestMap.get("userName").equals("") && !requestMap.get("userEmail").equals("") && !requestMap.get("id").equals("")) {
+
+            if (!dataHashMap.isEmpty()) {
+                for (String key : dataHashMap.keySet()) {
+                    Map<String, Object> userMap = dataHashMap.get(key).get(0);
+
+                    if (userMap.get("userName").equals(requestMap.get("userName"))
+                            && userMap.get("userEmail").equals(requestMap.get("userEmail"))
+                                && userMap.get("id").equals(requestMap.get("id"))) {
+
+                        MailController mailController = MailController.getInstance();
+                        mailController.sendPWMail(userMap.get("pw").toString(), userMap.get("userEmail").toString(), userMap.get("userName").toString());
+
+                        responseEntity = new ResponseEntity<>("SEND_SUCCESS", HttpStatus.OK);
+                        break;
+
+                    } else {
+                        responseEntity = new ResponseEntity<>("DONT_HAVE", HttpStatus.NOT_FOUND);
+                    }
+                }
+            }
+        } else {
+            responseEntity = new ResponseEntity<>("DATA_IS_NULL", HttpStatus.BAD_REQUEST);
+        }
+
 
         makeStatusLog(request, responseEntity);
         return responseEntity;
@@ -536,7 +603,7 @@ public class Controller {
 
         if (!dataHashMap.isEmpty()) {
             for (String key : dataHashMap.keySet()) {
-                if (dataHashMap.get(key).get(0).get("checkCarLicense").equals("F")) {
+                if (dataHashMap.get(key).get(0).containsKey("checkCarLicense") && dataHashMap.get(key).get(0).get("checkCarLicense").equals("F")) {
                     try {
                         userDataHashMap.put(key, Files.readAllBytes(new File(filePath + key).toPath()));
                     } catch (IOException e) {

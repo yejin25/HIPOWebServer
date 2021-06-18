@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>kr.ac.jbnu.se</groupId>
 	<artifactId>hipowebserver</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.1</version>
 	<name>hipowebserver</name>
 	<description>hipowebserver to springboot</description>
 	<properties>
@@ -83,6 +83,12 @@
 			<artifactId>lombok</artifactId>
 			<version>1.18.20</version>
 			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.sun.mail</groupId>
+			<artifactId>javax.mail</artifactId>
+			<version>1.6.1</version>
 		</dependency>
 
 	</dependencies>
