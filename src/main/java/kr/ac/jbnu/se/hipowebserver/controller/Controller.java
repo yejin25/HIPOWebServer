@@ -153,7 +153,7 @@ public class Controller {
 
         if (!dataHashMap.containsKey(requestMap.get("id"))) {
             if (requestMap.get("pw") != null && requestMap.get("userName") != null
-                    && requestMap.get("userPhoneNumber") != null && requestMap.get("userEmail") != null) {
+                    && requestMap.get("userEmail") != null) {
                 receiveUserData = new ArrayList<Map<String, Object>>();
 
                 Map<String, Object> tempMap = requestMap;
@@ -235,12 +235,11 @@ public class Controller {
                 dataHashMap.put(id, receiveData);
 
                 responseEntity = new ResponseEntity<>(receiveMap, HttpStatus.OK);
-
             } else {
                 responseEntity = new ResponseEntity<>("IS_NOT_HAVE_KEY", HttpStatus.BAD_REQUEST);
             }
-
-        } else {
+        }
+         else {
             responseEntity = new ResponseEntity<>("DATA_NOT_RECOGNIZE", HttpStatus.BAD_REQUEST);
         }
 
@@ -284,66 +283,6 @@ public class Controller {
         makeStatusLog(request, responseEntity);
         return responseEntity;
     }
-/*
-    @RequestMapping(value = "/android/user/find/{typical}", method = RequestMethod.POST)
-    @ResponseBody
-    public ResponseEntity<?> AndroidPostFindUserAccount(HttpServletRequest request, @PathVariable String typical, @RequestBody Map<String, Object> requestMap) {
-        ResponseEntity<?> responseEntity = null;
-        Map<String, Object> returnalMap = new HashMap<String, Object>();
-
-        if (typical != null && requestMap != null) {
-            ArrayList<Map<String, Object>> userArray = null;
-            Map<String, Object> userMap = null;
-
-            switch (typical) {
-                case "id":
-                    for (String key : dataHashMap.keySet()) {
-                        userArray = dataHashMap.get(key);
-                        userMap = userArray.get(0);
-
-                        if (userMap.get("userName").toString().equals(requestMap.get("userName").toString())
-                                && userMap.get("userPhoneNumber").toString().equals(requestMap.get("userPhoneNumber").toString())) {
-                            returnalMap.put("userId", userMap.get("id"));
-                            break;
-                        }
-
-                    }
-
-                    break;
-
-                case "pw":
-                    for (String key : dataHashMap.keySet()) {
-                        userArray = dataHashMap.get(key);
-                        userMap = userArray.get(0);
-
-                        if (userMap.get("id").toString().equals(requestMap.get("userId").toString())
-                                && userMap.get("userPhoneNumber").toString().equals(requestMap.get("userPhoneNumber").toString())) {
-                            returnalMap.put("isChecked", "OK");
-                            break;
-
-                        } else {
-                            returnalMap.put("isChecked", "NO");
-                        }
-
-                    }
-
-                    break;
-            }
-
-            if (returnalMap == null) {
-                responseEntity = new ResponseEntity<>("IS_NOT", HttpStatus.BAD_REQUEST);
-
-            } else {
-                responseEntity = new ResponseEntity<>(returnalMap, HttpStatus.OK);
-            }
-
-        } else {
-            responseEntity = new ResponseEntity<>("DATA_NOT_RECOGNIZE", HttpStatus.BAD_REQUEST);
-        }
-
-        makeStatusLog(request, responseEntity);
-        return responseEntity;
-    }*/
 
     @RequestMapping(value = "/android/user/find/id", method = RequestMethod.POST)
     @ResponseBody
