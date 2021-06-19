@@ -259,14 +259,17 @@ public class Controller {
 
                 if (userMap.get("pw").toString().equals(requestMap.get("pw").toString())) {
                         returnalMap.put("userName", userMap.get("userName"));
+
                     if (userMap.get("checkCarLicense") != null){
                         Map<String, Object> checkCarLicenseMap = new HashMap<>();
                         returnalMap.put("checkCarLicense", userMap.get("checkCarLicense"));
-                        responseEntity = new ResponseEntity<>(returnalMap, HttpStatus.OK);
                     }
-                    else{
-                        responseEntity = new ResponseEntity<>(returnalMap, HttpStatus.OK);
+
+                    if(userMap.get("userCarNumber") != null){
+                        returnalMap.put("userCarNumber", userMap.get("userCarNumber"));
                     }
+
+                    responseEntity = new ResponseEntity<>(returnalMap, HttpStatus.OK);
 
                 } else {
                     responseEntity = new ResponseEntity<>("NO", HttpStatus.NOT_FOUND);
